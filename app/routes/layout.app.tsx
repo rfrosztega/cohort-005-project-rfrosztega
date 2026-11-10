@@ -1,4 +1,10 @@
-import { Outlet } from "react-router";
+import { Outlet, useLocation, useSearchParams } from "react-router";
+import {
+  NOTIFICATION_VARIANTS,
+  useNotificationsPrototype,
+  type PrototypeLinks,
+} from "~/components/notifications-prototype";
+import { PrototypeSwitcher } from "~/components/prototype-switcher";
 import type { Route } from "./+types/layout.app";
 import { Sidebar } from "~/components/sidebar";
 import { DevUI } from "~/components/dev-ui";
@@ -17,6 +23,8 @@ import {
   teamMembers,
   TeamMemberRole,
   LessonProgressStatus,
+  enrollments,
+  UserRole,
 } from "~/db/schema";
 
 function getAllUsers() {
@@ -171,6 +179,34 @@ function getRecentlyProgressedCourses(userId: number, limit: number = 3) {
     .all();
 }
 
+// PROTOTYPE (notifications, ticket #4): a real course + lesson so fake Notifications deep-link somewhere real.
+function getPrototypeLinks(userId: number, role: UserRole): PrototypeLinks {
+  const course =
+    role === UserRole.Instructor
+      ? db.select().from(courses).where(eq(courses.instructorId, userId)).get()
+      : (db
+          .select({ c: courses })
+          .from(enrollments)
+          .innerJoin(courses, eq(enrollments.courseId, courses.id))
+          .where(eq(enrollments.userId, userId))
+          .get()?.c ?? db.select().from(courses).get());
+  if (!course) return null;
+  const lesson = db
+    .select({ id: lessons.id, title: lessons.title })
+    .from(lessons)
+    .innerJoin(modules, eq(lessons.moduleId, modules.id))
+    .where(eq(modules.courseId, course.id))
+    .orderBy(modules.position, lessons.position)
+    .get();
+  if (!lesson) return null;
+  return {
+    courseTitle: course.title,
+    courseSlug: course.slug,
+    lessonId: lesson.id,
+    lessonTitle: lesson.title,
+  };
+}
+
 export async function loader({ request }: Route.LoaderArgs) {
   const users = getAllUsers();
   const currentUserId = await getCurrentUserId(request);
@@ -213,6 +249,9 @@ export async function loader({ request }: Route.LoaderArgs) {
     countryTierInfo,
     countries: COUNTRIES,
     isTeamAdmin: currentUserId ? isTeamAdmin(currentUserId) : false,
+    prototypeLinks: currentUser
+      ? getPrototypeLinks(currentUser.id, currentUser.role)
+      : null,
   };
 }
 
@@ -225,7 +264,19 @@ export default function AppLayout({ loaderData }: Route.ComponentProps) {
     countryTierInfo,
     countries,
     isTeamAdmin: userIsTeamAdmin,
+    prototypeLinks,
   } = loaderData;
+
+  // PROTOTYPE (notifications, ticket #4)
+  const [searchParams] = useSearchParams();
+  const variant = searchParams.get("variant") ?? "A";
+  const proto = useNotificationsPrototype({
+    variant,
+    role: currentUser?.role ?? null,
+    isTeamAdmin: userIsTeamAdmin,
+    links: prototypeLinks,
+    pathname: useLocation().pathname,
+  });
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -233,10 +284,18 @@ export default function AppLayout({ loaderData }: Route.ComponentProps) {
         currentUser={currentUser}
         recentCourses={recentCourses}
         isTeamAdmin={userIsTeamAdmin}
+        headerSlot={proto.sidebarHeader}
+        navSlot={proto.sidebarNav}
       />
       <main className="flex-1 overflow-y-auto">
-        <Outlet />
+        {proto.mainTop}
+        {proto.mainOverride ?? <Outlet />}
       </main>
+      <PrototypeSwitcher
+        variants={NOTIFICATION_VARIANTS}
+        current={variant}
+        status={proto.status}
+      />
       <DevUI
         users={users}
         currentUser={currentUser}
