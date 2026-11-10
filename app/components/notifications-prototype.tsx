@@ -372,10 +372,15 @@ function VariantCTopBar({ feed, role }: { feed: Feed; role: UserRole | null }) {
       <div className="sticky top-0 z-30 flex h-14 items-center justify-end border-b bg-background/95 px-6 backdrop-blur">
         <button
           onClick={() => setOpen(true)}
-          className="relative flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm hover:bg-accent"
+          title="Notifications"
+          aria-label={feed.unread > 0 ? `Notifications, ${feed.unread} new` : "Notifications"}
+          className={cn(
+            "relative flex items-center gap-2 rounded-full border py-1.5 text-sm hover:bg-accent",
+            feed.unread > 0 ? "px-3" : "px-1.5"
+          )}
         >
           <Bell className="size-4" />
-          {feed.unread > 0 ? `${feed.unread} new` : "Notifications"}
+          {feed.unread > 0 && `${feed.unread} new`}
         </button>
       </div>
       {open && (
