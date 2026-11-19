@@ -17,7 +17,9 @@ import {
   User,
   Moon,
   Sun,
+  Sparkles,
 } from "lucide-react";
+import { landingHero, type HeroStat } from "~/modules/landing";
 import { CourseImage } from "~/components/course-image";
 import { DevUI } from "~/components/dev-ui";
 import { getCurrentUserId, getDevCountry } from "~/lib/session";
@@ -162,6 +164,12 @@ export async function loader({ request }: Route.LoaderArgs) {
   };
 }
 
+const statIcons = {
+  courses: BookOpen,
+  categories: GraduationCap,
+  pace: Users,
+} satisfies Record<HeroStat["key"], unknown>;
+
 export default function Home({ loaderData }: Route.ComponentProps) {
   const {
     featuredCourses,
@@ -174,6 +182,12 @@ export default function Home({ loaderData }: Route.ComponentProps) {
     countries,
   } = loaderData;
   const [isDark, setIsDark] = useState(false);
+  const hero = landingHero({
+    signedIn: currentUser !== null,
+    totalCourses,
+    totalCategories,
+  });
+  const spotlight = featuredCourses[0];
 
   useEffect(() => {
     setIsDark(document.documentElement.classList.contains("dark"));
@@ -234,51 +248,92 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         </div>
       </header>
 
-      <section className="mx-auto max-w-6xl px-6 py-24 text-center">
-        <h1 className="text-5xl font-bold tracking-tight sm:text-6xl">
-          Learn to code,
-          <br />
-          <span className="text-muted-foreground">at your own pace</span>
-        </h1>
-        <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
-          Structured courses built by experienced instructors. Track your
-          progress, take quizzes, and build real-world skills.
-        </p>
-        <div className="mt-10 flex items-center justify-center gap-4">
-          <Button asChild size="lg">
-            <Link to="/courses">
-              Browse Courses
-              <ArrowRight className="ml-2 size-4" />
-            </Link>
-          </Button>
-        </div>
-      </section>
-
-      <section className="border-y border-border bg-muted/50 py-16">
-        <div className="mx-auto grid max-w-6xl grid-cols-1 gap-8 px-6 sm:grid-cols-3">
-          <div className="text-center">
-            <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-lg bg-primary/10">
-              <BookOpen className="size-6 text-primary" />
-            </div>
-            <p className="text-2xl font-bold">{totalCourses}</p>
-            <p className="text-sm text-muted-foreground">Available Courses</p>
-          </div>
-          <div className="text-center">
-            <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-lg bg-primary/10">
-              <GraduationCap className="size-6 text-primary" />
-            </div>
-            <p className="text-2xl font-bold">{totalCategories}</p>
-            <p className="text-sm text-muted-foreground">Categories</p>
-          </div>
-          <div className="text-center">
-            <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-lg bg-primary/10">
-              <Users className="size-6 text-primary" />
-            </div>
-            <p className="text-2xl font-bold">Self-paced</p>
-            <p className="text-sm text-muted-foreground">
-              Learn on your schedule
+      <section className="relative overflow-hidden border-b border-border">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 bg-linear-to-br from-primary/5 via-transparent to-transparent"
+        />
+        <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-6 py-20 lg:grid-cols-[1.15fr_1fr] lg:py-28">
+          <div>
+            <p className="inline-flex items-center gap-2 rounded-full border border-border bg-muted/60 px-3 py-1 text-xs font-medium text-muted-foreground">
+              <Sparkles className="size-3.5 text-primary" />
+              Courses for working developers
             </p>
+            <h1 className="mt-6 text-5xl font-bold tracking-tight sm:text-6xl">
+              Learn to code,
+              <br />
+              <span className="text-muted-foreground">at your own pace</span>
+            </h1>
+            <p className="mt-6 max-w-xl text-lg text-muted-foreground">
+              Structured courses built by experienced instructors. Track your
+              progress, take quizzes, and build real-world skills.
+            </p>
+            <div className="mt-10 flex flex-wrap items-center gap-4">
+              <Button asChild size="lg">
+                <Link to={hero.callsToAction.primary.to}>
+                  {hero.callsToAction.primary.label}
+                  <ArrowRight className="ml-2 size-4" />
+                </Link>
+              </Button>
+              <Button asChild size="lg" variant="outline">
+                <Link to={hero.callsToAction.secondary.to}>
+                  {hero.callsToAction.secondary.label}
+                </Link>
+              </Button>
+            </div>
+            <dl className="mt-12 grid max-w-xl grid-cols-3 gap-6 border-t border-border pt-8">
+              {hero.stats.map((stat) => {
+                const Icon = statIcons[stat.key];
+                return (
+                  <div key={stat.key}>
+                    <dt className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Icon className="size-4 text-primary" />
+                      {stat.label}
+                    </dt>
+                    <dd className="mt-1 text-2xl font-bold">{stat.value}</dd>
+                  </div>
+                );
+              })}
+            </dl>
           </div>
+
+          {spotlight && (
+            <Link
+              to={`/courses/${spotlight.slug}`}
+              className="group hidden lg:block"
+            >
+              <Card className="overflow-hidden pt-0 shadow-lg transition-shadow group-hover:shadow-xl">
+                <CourseImage
+                  src={spotlight.coverImageUrl}
+                  alt={spotlight.title}
+                  className="aspect-video w-full object-cover"
+                />
+                <CardHeader>
+                  <p className="text-xs font-medium uppercase tracking-wide text-primary">
+                    Newest course
+                  </p>
+                  <h2 className="text-xl font-semibold leading-snug group-hover:text-primary">
+                    {spotlight.title}
+                  </h2>
+                </CardHeader>
+                <CardContent>
+                  <p className="line-clamp-2 text-sm text-muted-foreground">
+                    {spotlight.description}
+                  </p>
+                </CardContent>
+                <CardFooter className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span className="flex items-center gap-1">
+                    <User className="size-3" />
+                    {spotlight.instructorName ?? "Instructor"}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <BookOpen className="size-3" />
+                    {spotlight.lessonCount} lessons
+                  </span>
+                </CardFooter>
+              </Card>
+            </Link>
+          )}
         </div>
       </section>
 
@@ -341,8 +396,14 @@ export default function Home({ loaderData }: Route.ComponentProps) {
       )}
 
       <footer className="border-t border-border py-8">
-        <div className="mx-auto max-w-6xl px-6 text-center text-sm text-muted-foreground">
-          Cadence
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 text-sm text-muted-foreground">
+          <span className="font-semibold text-foreground">Cadence</span>
+          <Link
+            to="/courses"
+            className="transition-colors hover:text-foreground"
+          >
+            Browse courses
+          </Link>
         </div>
       </footer>
 
