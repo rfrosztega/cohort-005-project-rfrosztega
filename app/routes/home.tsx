@@ -139,7 +139,7 @@ export async function loader({ request }: Route.LoaderArgs) {
     50,
     0
   );
-  const featured = courses.slice(0, 3).map((course) => ({
+  const featured = courses.slice(0, 4).map((course) => ({
     ...course,
     lessonCount: getLessonCountForCourse(course.id),
   }));
@@ -170,6 +170,56 @@ const statIcons = {
   pace: Users,
 } satisfies Record<HeroStat["key"], unknown>;
 
+type FeaturedCourse =
+  Route.ComponentProps["loaderData"]["featuredCourses"][number];
+
+function CourseCard({
+  course,
+  eyebrow,
+  className,
+}: {
+  course: FeaturedCourse;
+  eyebrow?: string;
+  className: string;
+}) {
+  return (
+    <Link to={`/courses/${course.slug}`} className="group block">
+      <Card className={`overflow-hidden pt-0 transition-shadow ${className}`}>
+        <CourseImage
+          src={course.coverImageUrl}
+          alt={course.title}
+          className="aspect-video w-full object-cover"
+        />
+        <CardHeader>
+          {eyebrow && (
+            <p className="text-xs font-medium uppercase tracking-wide text-primary">
+              {eyebrow}
+            </p>
+          )}
+          <h3 className="font-semibold leading-snug group-hover:text-primary">
+            {course.title}
+          </h3>
+        </CardHeader>
+        <CardContent>
+          <p className="line-clamp-2 text-sm text-muted-foreground">
+            {course.description}
+          </p>
+        </CardContent>
+        <CardFooter className="flex items-center justify-between text-xs text-muted-foreground">
+          <span className="flex items-center gap-1">
+            <User className="size-3" />
+            {course.instructorName ?? "Instructor"}
+          </span>
+          <span className="flex items-center gap-1">
+            <BookOpen className="size-3" />
+            {course.lessonCount} lessons
+          </span>
+        </CardFooter>
+      </Card>
+    </Link>
+  );
+}
+
 export default function Home({ loaderData }: Route.ComponentProps) {
   const {
     featuredCourses,
@@ -187,7 +237,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
     totalCourses,
     totalCategories,
   });
-  const spotlight = featuredCourses[0];
+  const [spotlight, ...moreCourses] = featuredCourses;
 
   useEffect(() => {
     setIsDark(document.documentElement.classList.contains("dark"));
@@ -298,46 +348,16 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           </div>
 
           {spotlight && (
-            <Link
-              to={`/courses/${spotlight.slug}`}
-              className="group hidden lg:block"
-            >
-              <Card className="overflow-hidden pt-0 shadow-lg transition-shadow group-hover:shadow-xl">
-                <CourseImage
-                  src={spotlight.coverImageUrl}
-                  alt={spotlight.title}
-                  className="aspect-video w-full object-cover"
-                />
-                <CardHeader>
-                  <p className="text-xs font-medium uppercase tracking-wide text-primary">
-                    Newest course
-                  </p>
-                  <h2 className="text-xl font-semibold leading-snug group-hover:text-primary">
-                    {spotlight.title}
-                  </h2>
-                </CardHeader>
-                <CardContent>
-                  <p className="line-clamp-2 text-sm text-muted-foreground">
-                    {spotlight.description}
-                  </p>
-                </CardContent>
-                <CardFooter className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    <User className="size-3" />
-                    {spotlight.instructorName ?? "Instructor"}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <BookOpen className="size-3" />
-                    {spotlight.lessonCount} lessons
-                  </span>
-                </CardFooter>
-              </Card>
-            </Link>
+            <CourseCard
+              course={spotlight}
+              eyebrow="Newest course"
+              className="shadow-lg group-hover:shadow-xl"
+            />
           )}
         </div>
       </section>
 
-      {featuredCourses.length > 0 && (
+      {moreCourses.length > 0 && (
         <section className="mx-auto max-w-6xl px-6 py-20">
           <div className="mb-10 flex items-end justify-between">
             <div>
@@ -345,7 +365,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                 Featured Courses
               </h2>
               <p className="mt-2 text-muted-foreground">
-                Start learning with our most popular courses
+                More of our newest courses
               </p>
             </div>
             <Button asChild variant="outline">
@@ -356,40 +376,12 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             </Button>
           </div>
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {featuredCourses.map((course) => (
-              <Link
+            {moreCourses.map((course) => (
+              <CourseCard
                 key={course.id}
-                to={`/courses/${course.slug}`}
-                className="group"
-              >
-                <Card className="h-full overflow-hidden pt-0 transition-shadow group-hover:shadow-md">
-                  <CourseImage
-                    src={course.coverImageUrl}
-                    alt={course.title}
-                    className="aspect-video w-full object-cover"
-                  />
-                  <CardHeader>
-                    <h3 className="font-semibold leading-snug group-hover:text-primary">
-                      {course.title}
-                    </h3>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="line-clamp-2 text-sm text-muted-foreground">
-                      {course.description}
-                    </p>
-                  </CardContent>
-                  <CardFooter className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <User className="size-3" />
-                      {course.instructorName ?? "Instructor"}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <BookOpen className="size-3" />
-                      {course.lessonCount} lessons
-                    </span>
-                  </CardFooter>
-                </Card>
-              </Link>
+                course={course}
+                className="h-full group-hover:shadow-md"
+              />
             ))}
           </div>
         </section>
