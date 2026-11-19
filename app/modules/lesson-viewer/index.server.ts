@@ -21,6 +21,7 @@ export {
 } from "./lib/comment-thread.server";
 export {
   getQuizByLessonId,
+  getQuizForLesson,
   getQuizWithQuestions,
   getBestAttempt,
   computeResult,
