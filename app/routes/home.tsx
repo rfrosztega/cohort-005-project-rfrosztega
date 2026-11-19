@@ -24,7 +24,7 @@ import { CourseImage } from "~/components/course-image";
 import { DevUI } from "~/components/dev-ui";
 import { getCurrentUserId, getDevCountry } from "~/lib/session";
 import { getCountryTierInfo, COUNTRIES } from "~/lib/ppp";
-import { eq, like, and, or, sql } from "drizzle-orm";
+import { eq, like, and, or, sql, count, inArray } from "drizzle-orm";
 import { db } from "~/db";
 import { courses, categories, users, modules, lessons } from "~/db/schema";
 
@@ -101,22 +101,26 @@ function buildCourseQuery(
   return sorted.limit(limit).offset(offset).all();
 }
 
-function getLessonCountForCourse(courseId: number) {
-  const courseModules = db
-    .select({ id: modules.id })
+function getLessonCountsForCourses(courseIds: number[]) {
+  if (courseIds.length === 0) return new Map<number, number>();
+  const rows = db
+    .select({ courseId: modules.courseId, count: count(lessons.id) })
     .from(modules)
-    .where(eq(modules.courseId, courseId))
+    .innerJoin(lessons, eq(lessons.moduleId, modules.id))
+    .where(inArray(modules.courseId, courseIds))
+    .groupBy(modules.courseId)
     .all();
+  return new Map(rows.map((row) => [row.courseId, row.count]));
+}
 
-  if (courseModules.length === 0) return 0;
-
-  const count = db
-    .select({ count: sql<number>`count(*)` })
-    .from(lessons)
-    .where(or(...courseModules.map((m) => eq(lessons.moduleId, m.id))))
-    .get();
-
-  return count?.count ?? 0;
+function getPublishedCourseCount() {
+  return (
+    db
+      .select({ count: count() })
+      .from(courses)
+      .where(eq(courses.status, CourseStatus.Published))
+      .get()?.count ?? 0
+  );
 }
 
 export function meta() {
@@ -131,17 +135,18 @@ export function meta() {
 }
 
 export async function loader({ request }: Route.LoaderArgs) {
-  const courses = buildCourseQuery(
+  const newest = buildCourseQuery(
     null,
     null,
     CourseStatus.Published,
     "newest",
-    50,
+    4,
     0
   );
-  const featured = courses.slice(0, 4).map((course) => ({
+  const lessonCounts = getLessonCountsForCourses(newest.map((c) => c.id));
+  const featured = newest.map((course) => ({
     ...course,
-    lessonCount: getLessonCountForCourse(course.id),
+    lessonCount: lessonCounts.get(course.id) ?? 0,
   }));
   const categories = getAllCategories();
   const users = getAllUsers();
@@ -152,7 +157,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 
   return {
     featuredCourses: featured,
-    totalCourses: courses.length,
+    totalCourses: getPublishedCourseCount(),
     totalCategories: categories.length,
     users: users.map((u) => ({ id: u.id, name: u.name, role: u.role })),
     currentUser: currentUser
@@ -391,10 +396,10 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 text-sm text-muted-foreground">
           <span className="font-semibold text-foreground">Cadence</span>
           <Link
-            to="/courses"
+            to={hero.callsToAction.primary.to}
             className="transition-colors hover:text-foreground"
           >
-            Browse courses
+            {hero.callsToAction.primary.label}
           </Link>
         </div>
       </footer>
