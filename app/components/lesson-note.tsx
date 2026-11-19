@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useFetcher } from "react-router";
 import { ChevronDown, NotebookPen } from "lucide-react";
 import { notePreview } from "~/modules/lesson-note";
 import { Button } from "~/components/ui/button";
+import { Card } from "~/components/ui/card";
 import { Textarea } from "~/components/ui/textarea";
 import { cn, formatRelativeTime } from "~/lib/utils";
 
@@ -19,13 +20,13 @@ export function LessonNote({ note }: { note: Note }) {
   const preview = notePreview(note?.body);
 
   return (
-    <section className="mb-8 rounded-lg border">
+    <Card className="mb-8 gap-0 py-0">
       <button
         type="button"
         aria-expanded={open}
         aria-controls={EDITOR_ID}
         onClick={() => setOpen((wasOpen) => !wasOpen)}
-        className="flex w-full items-center gap-2 rounded-lg px-4 py-3 text-left text-sm hover:bg-muted/50"
+        className="flex w-full items-center gap-2 rounded-xl px-4 py-3 text-left text-sm hover:bg-muted/50"
       >
         <NotebookPen className="size-4 shrink-0 text-muted-foreground" />
         <span className="font-medium">
@@ -41,25 +42,31 @@ export function LessonNote({ note }: { note: Note }) {
           )}
         />
       </button>
-      <NoteEditor note={note} hidden={!open} />
-    </section>
+      <NoteEditor note={note} open={open} />
+    </Card>
   );
 }
 
-function NoteEditor({ note, hidden }: { note: Note; hidden: boolean }) {
+function NoteEditor({ note, open }: { note: Note; open: boolean }) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fetcher = useFetcher<{ ok: boolean; error?: string }>();
   const isSaving = fetcher.state !== "idle";
   const error = fetcher.data?.error;
+
+  useEffect(() => {
+    if (open) textareaRef.current?.focus();
+  }, [open]);
 
   return (
     <fetcher.Form
       id={EDITOR_ID}
       method="post"
-      hidden={hidden}
+      hidden={!open}
       className="space-y-3 border-t px-4 py-3"
     >
       <input type="hidden" name="intent" value="save-note" />
       <Textarea
+        ref={textareaRef}
         name="body"
         rows={4}
         defaultValue={note?.body ?? ""}
