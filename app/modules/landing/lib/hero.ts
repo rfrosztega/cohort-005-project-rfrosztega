@@ -22,19 +22,19 @@ function plural(count: number, one: string, many: string): string {
 }
 
 export function statsFor(totals: {
-  courses: number;
-  categories: number;
+  totalCourses: number;
+  totalCategories: number;
 }): HeroStat[] {
   return [
     {
       key: "courses",
-      value: String(totals.courses),
-      label: plural(totals.courses, "Course", "Courses"),
+      value: String(totals.totalCourses),
+      label: plural(totals.totalCourses, "Course", "Courses"),
     },
     {
       key: "categories",
-      value: String(totals.categories),
-      label: plural(totals.categories, "Category", "Categories"),
+      value: String(totals.totalCategories),
+      label: plural(totals.totalCategories, "Category", "Categories"),
     },
     { key: "pace", value: "Self-paced", label: "Your schedule" },
   ];
