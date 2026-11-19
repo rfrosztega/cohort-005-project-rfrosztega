@@ -32,15 +32,19 @@ import {
   markLessonInProgress,
   getLastWatchPosition,
   calculateWatchProgress,
+} from "~/modules/lesson-viewer/lesson.server";
+import {
   getCommentById,
   getLessonThread,
   renderThread,
+} from "~/modules/lesson-viewer/comment-thread.server";
+import {
   getQuizByLessonId,
   getQuizForLesson,
   getQuizWithQuestions,
   getBestAttempt,
   computeResult,
-} from "~/modules/lesson-viewer/index.server";
+} from "~/modules/lesson-viewer/quiz.server";
 import { LockedLesson } from "~/components/lesson-locked";
 import { FullLesson } from "~/components/lesson-full";
 
